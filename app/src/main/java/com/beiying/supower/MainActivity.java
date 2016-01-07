@@ -40,6 +40,12 @@ public class MainActivity extends ActionBarActivity {
         btn1.setTag(Constant.SVG);
         btn1.setOnClickListener(btnManager);
         mainView.addView(btn1);
+
+        Button btn2 = new Button(this);
+        btn2.setText("进度按钮");
+        btn2.setTag(Constant.PROGRESS_BUTTON);
+        btn2.setOnClickListener(btnManager);
+        mainView.addView(btn2);
     }
 
     @Override

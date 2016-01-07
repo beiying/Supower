@@ -5,4 +5,5 @@ package com.beiying.supower;
  */
 public class Constant {
     public final static String SVG = "svg";
+    public static final String PROGRESS_BUTTON = "progress_btn";
 }
