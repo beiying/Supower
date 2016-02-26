@@ -2,10 +2,11 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
+      <module fileurl="file://$PROJECT_DIR$/Supower.iml" filepath="$PROJECT_DIR$/Supower.iml" />
       <module fileurl="file://$PROJECT_DIR$/app/app.iml" filepath="$PROJECT_DIR$/app/app.iml" />
+      <module fileurl="file://$PROJECT_DIR$/corenet/corenet.iml" filepath="$PROJECT_DIR$/corenet/corenet.iml" />
       <module fileurl="file://$PROJECT_DIR$/coreview/coreview.iml" filepath="$PROJECT_DIR$/coreview/coreview.iml" />
-      <module fileurl="file://$PROJECT_DIR$/fixer/fixer.iml" filepath="$PROJECT_DIR$/fixer/fixer.iml" />
-      <module fileurl="file://$PROJECT_DIR$/supower.iml" filepath="$PROJECT_DIR$/supower.iml" />
+      <module fileurl="file://$PROJECT_DIR$/pluginfw/pluginfw.iml" filepath="$PROJECT_DIR$/pluginfw/pluginfw.iml" />
     </modules>
   </component>
 </project>

@@ -1,1 +1,1 @@
-include ':app', ':coreview', ':fixer'
+include ':app', ':coreview', ':corenet', ':pluginfw'
