@@ -1,11 +1,18 @@
 package com.beiying.pluginfw;
 
+import android.annotation.TargetApi;
+import android.app.Activity;
+import android.app.Service;
 import android.content.Context;
+import android.content.ServiceConnection;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.res.AssetManager;
 import android.content.res.Resources;
+import android.os.Build;
+import android.text.TextUtils;
 
+import com.beiying.pluginfw.util.DLConstants;
 import com.beiying.pluginfw.util.SoLibManager;
 
 import java.io.File;
@@ -15,6 +22,12 @@ import java.util.HashMap;
 import dalvik.system.DexClassLoader;
 
 /**
+ * 插件化的优点包括：(1) 模块解耦，(2) 动态升级，(3) 高效并行开发(编译速度更快) (4) 按需加载，内存占用更低等等。
+ * DynamicLoadApk 提供了 3 种开发方式，让开发者在无需理解其工作原理的情况下快速的集成插件化功能。
+ *      宿主程序与插件完全独立
+ *      宿主程序开放部分接口供插件与之通信
+ *      宿主程序耦合插件的部分业务逻辑
+ *
  * Created by beiying on 2016/2/26.
  */
 public class DLPluginManager {
@@ -23,6 +36,7 @@ public class DLPluginManager {
     private Context mContext;
     private final HashMap<String, DLPluginPackage> mPackagesHolder = new HashMap<String, DLPluginPackage>();
 
+    private int mFrom = DLConstants.FROM_INTERNAL;
     private String mNativeLibDir = null;
 
     private int mResult;
@@ -113,6 +127,270 @@ public class DLPluginManager {
         return mPackagesHolder.get(packageName);
     }
 
+    public int startPluginActivity(Context context, DLIntent dlIntent) {
+        return startPluginActivityForResult(context, dlIntent, -1);
+    }
+
+    /**
+     * @param context
+     * @param dlIntent
+     * @param requestCode
+     * @return One of below: {@link #START_RESULT_SUCCESS}
+     *         {@link #START_RESULT_NO_PKG} {@link #START_RESULT_NO_CLASS}
+     *         {@link #START_RESULT_TYPE_ERROR}
+     */
+    @TargetApi(Build.VERSION_CODES.ICE_CREAM_SANDWICH)
+    public int startPluginActivityForResult(Context context, DLIntent dlIntent, int requestCode) {
+        if (mFrom == DLConstants.FROM_INTERNAL) {
+            dlIntent.setClassName(context, dlIntent.getPluginClass());
+            performStartActivityForResult(context, dlIntent, requestCode);
+            return DLPluginManager.START_RESULT_SUCCESS;
+        }
+
+        String packageName = dlIntent.getPluginPackage();
+        if (TextUtils.isEmpty(packageName)) {
+            throw new NullPointerException("disallow null packageName.");
+        }
+
+        DLPluginPackage pluginPackage = mPackagesHolder.get(packageName);
+        if (pluginPackage == null) {
+            return START_RESULT_NO_PKG;
+        }
+
+        final String className = getPluginActivityFullPath(dlIntent, pluginPackage);
+        Class<?> clazz = loadPluginClass(pluginPackage.classLoader, className);
+        if (clazz == null) {
+            return START_RESULT_NO_CLASS;
+        }
+
+        Class<? extends Activity> activityClass = getProxyActivityClass(clazz);
+        if (activityClass == null) {
+            return START_RESULT_TYPE_ERROR;
+        }
+
+        dlIntent.putExtra(DLConstants.EXTRA_CLASS, className);
+        dlIntent.putExtra(DLConstants.EXTRA_PACKAGE, packageName);
+        dlIntent.setClass(mContext, activityClass);
+        performStartActivityForResult(context, dlIntent, requestCode);
+        return START_RESULT_SUCCESS;
+
+    }
+
+    /**
+     * 获取插件对应的代理Activity
+     * @param clazz
+     * @return
+     */
+    private Class<? extends Activity> getProxyActivityClass(Class<?> clazz) {
+        Class<? extends Activity> activityClass = null;
+        if (DLBasePluginActivity.class.isAssignableFrom(clazz)) {
+            activityClass = DLProxyActivity.class;
+        } else if (DLBasePluginFragmentActivity.class.isAssignableFrom(clazz)) {
+            activityClass = DLProxyFragmentActivity.class;
+        }
+        return activityClass;
+    }
+
+    private Class<?> loadPluginClass(DexClassLoader classLoader, String className) {
+        Class<?> clazz = null;
+        try {
+            clazz = Class.forName(className, true, classLoader);
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+        }
+        return clazz;
+    }
+
+    private String getPluginActivityFullPath(DLIntent dlIntent, DLPluginPackage pluginPackage) {
+        String className = dlIntent.getPluginClass();
+        className = (className == null ? pluginPackage.defaultActivity : className);
+        if (className.startsWith(".")) {
+            className = dlIntent.getPluginPackage() + className;
+        }
+        return className;
+    }
+
+    private void performStartActivityForResult(Context context, DLIntent dlIntent, int requestCode) {
+        if (context instanceof Activity) {
+            ((Activity) context).startActivityForResult(dlIntent, requestCode);
+        } else {
+            context.startActivity(dlIntent);
+        }
+    }
+
+    public int startPluginService(final Context context, final DLIntent dlIntent) {
+        if (mFrom == DLConstants.FROM_INTERNAL) {
+            dlIntent.setClassName(context, dlIntent.getPluginClass());
+            context.startService(dlIntent);
+            return DLPluginManager.START_RESULT_SUCCESS;
+        }
+
+        fetchProxyServiceClass(dlIntent, new OnFetchProxyServiceClass() {
+            @Override
+            public void onFetch(int result, Class<? extends Service> proxyServiceClass) {
+                // TODO Auto-generated method stub
+                if (result == START_RESULT_SUCCESS) {
+                    dlIntent.setClass(context, proxyServiceClass);
+                    // start代理Service
+                    context.startService(dlIntent);
+                }
+                mResult = result;
+            }
+        });
+
+        return mResult;
+    }
+
+    public int stopPluginService(final Context context, final DLIntent dlIntent) {
+        if (mFrom == DLConstants.FROM_INTERNAL) {
+            dlIntent.setClassName(context, dlIntent.getPluginClass());
+            context.stopService(dlIntent);
+            return DLPluginManager.START_RESULT_SUCCESS;
+        }
+
+        fetchProxyServiceClass(dlIntent, new OnFetchProxyServiceClass() {
+            @Override
+            public void onFetch(int result, Class<? extends Service> proxyServiceClass) {
+                // TODO Auto-generated method stub
+                if (result == START_RESULT_SUCCESS) {
+                    dlIntent.setClass(context, proxyServiceClass);
+                    // stop代理Service
+                    context.stopService(dlIntent);
+                }
+                mResult = result;
+            }
+        });
+
+        return mResult;
+    }
+
+    public int bindPluginService(final Context context, final DLIntent dlIntent, final ServiceConnection conn,
+                                 final int flags) {
+        if (mFrom == DLConstants.FROM_INTERNAL) {
+            dlIntent.setClassName(context, dlIntent.getPluginClass());
+            context.bindService(dlIntent, conn, flags);
+            return DLPluginManager.START_RESULT_SUCCESS;
+        }
+
+        fetchProxyServiceClass(dlIntent, new OnFetchProxyServiceClass() {
+            @Override
+            public void onFetch(int result, Class<? extends Service> proxyServiceClass) {
+                // TODO Auto-generated method stub
+                if (result == START_RESULT_SUCCESS) {
+                    dlIntent.setClass(context, proxyServiceClass);
+                    // Bind代理Service
+                    context.bindService(dlIntent, conn, flags);
+                }
+                mResult = result;
+            }
+        });
+
+        return mResult;
+    }
+
+    public int unBindPluginService(final Context context, DLIntent dlIntent, final ServiceConnection conn) {
+        if (mFrom == DLConstants.FROM_INTERNAL) {
+            context.unbindService(conn);
+            return DLPluginManager.START_RESULT_SUCCESS;
+        }
+
+        fetchProxyServiceClass(dlIntent, new OnFetchProxyServiceClass() {
+            @Override
+            public void onFetch(int result, Class<? extends Service> proxyServiceClass) {
+                // TODO Auto-generated method stub
+                if (result == START_RESULT_SUCCESS) {
+                    // unBind代理Service
+                    context.unbindService(conn);
+                }
+                mResult = result;
+            }
+        });
+        return mResult;
+
+    }
+
+    /**
+     * 获取代理ServiceClass
+     * @param dlIntent
+     * @param fetchProxyServiceClass
+     */
+    private void fetchProxyServiceClass(DLIntent dlIntent, OnFetchProxyServiceClass fetchProxyServiceClass) {
+        String packageName = dlIntent.getPluginPackage();
+        if (TextUtils.isEmpty(packageName)) {
+            throw new NullPointerException("disallow null packageName.");
+        }
+        DLPluginPackage pluginPackage = mPackagesHolder.get(packageName);
+        if (pluginPackage == null) {
+            fetchProxyServiceClass.onFetch(START_RESULT_NO_PKG, null);
+            return;
+        }
+
+        // 获取要启动的Service的全名
+        String className = dlIntent.getPluginClass();
+        Class<?> clazz = loadPluginClass(pluginPackage.classLoader, className);
+        if (clazz == null) {
+            fetchProxyServiceClass.onFetch(START_RESULT_NO_CLASS, null);
+            return;
+        }
+
+        Class<? extends Service> proxyServiceClass = getProxyServiceClass(clazz);
+        if (proxyServiceClass == null) {
+            fetchProxyServiceClass.onFetch(START_RESULT_TYPE_ERROR, null);
+            return;
+        }
+
+        // put extra data
+        dlIntent.putExtra(DLConstants.EXTRA_CLASS, className);
+        dlIntent.putExtra(DLConstants.EXTRA_PACKAGE, packageName);
+        fetchProxyServiceClass.onFetch(START_RESULT_SUCCESS, proxyServiceClass);
+    }
+
+    private Class<? extends Service> getProxyServiceClass(Class<?> clazz) {
+        Class<? extends Service> proxyServiceClass = null;
+        if (DLBasePluginService.class.isAssignableFrom(clazz)) {
+            proxyServiceClass = DLProxyService.class;
+        }
+        // 后续可能还有IntentService，待补充
+
+        return proxyServiceClass;
+    }
+
+    private interface OnFetchProxyServiceClass {
+        public void onFetch(int result, Class<? extends Service> proxyServiceClass);
+    }
+
+
+
+    /**
+     * return value of {#startPluginActivity(Activity, DLIntent)} start
+     * success
+     */
+    public static final int START_RESULT_SUCCESS = 0;
+
+    /**
+     * return value of { #startPluginActivity(Activity, DLIntent)} package
+     * not found
+     */
+    public static final int START_RESULT_NO_PKG = 1;
+
+    /**
+     * return value of { #startPluginActivity(Activity, DLIntent)} class
+     * not found
+     */
+    public static final int START_RESULT_NO_CLASS = 2;
+
+    /**
+     * return value of { #startPluginActivity(Activity, DLIntent)} class
+     * type error
+     */
+    public static final int START_RESULT_TYPE_ERROR = 3;
+
+    /**
+     * zhangjie1980
+     * Intent Extra keys
+     */
+    public final static String INTENT_PLUGIN_PACKAGE = "dl_plugin_package";
+    public final static String INTENT_PLUGIN_CLASS = "dl_plugin_class";
     /**
      * copy .so file to pluginlib dir.
      *
