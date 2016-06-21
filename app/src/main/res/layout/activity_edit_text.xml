@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:clipChildren="false"
+        android:clipToPadding="false"
+        android:orientation="vertical"
+        android:padding="16dp"
+        tools:context=".activity.EditTextWidgetsActivity">
+
+        <com.beiying.coreview.BYPinEntryEditText
+            android:id="@+id/txt_pin_entry"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:cursorVisible="false"
+            android:digits="1234567890"
+            android:inputType="number"
+            android:maxLength="4"
+            android:textIsSelectable="false"
+            android:textSize="20sp"
+            android:visibility="visible"
+            app:pinLineColors="@color/pin_line_colors" />
+
+        <com.beiying.coreview.BYAnimatedEditText
+            android:id="@+id/txt_pop_in"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:hint="Animate pop in"
+            android:singleLine="true"
+            android:textColor="@color/text_colors"
+            app:animationType="popIn" />
+
+        <com.beiying.coreview.BYAnimatedEditText
+            android:id="@+id/txt_bottom_up"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:hint="Animate bottom up"
+            android:gravity="right"
+            android:inputType="textNoSuggestions"
+            app:animationType="fromBottom" />
+
+        <com.beiying.coreview.BYAnimatedEditText
+            android:id="@+id/txt_right_in"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:gravity="center"
+            android:hint="Animate right to left"
+            android:inputType="textNoSuggestions"
+            app:animationType="fromRight" />
+
+        <com.beiying.coreview.BYAnimatedEditText
+            android:id="@+id/txt_middle_up"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:hint="Animate middle up"
+            android:inputType="textNoSuggestions"
+            app:animationType="fromMiddle" />
+
+        <EditText
+            android:id="@+id/txt_regular"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:hint="Regular EditText" />
+
+
+        <Button
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:onClick="onClick_clear"
+            android:text="Toggle Text"/>
+    </LinearLayout>
+</ScrollView>
