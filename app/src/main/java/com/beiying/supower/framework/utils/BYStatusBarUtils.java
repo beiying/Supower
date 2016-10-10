@@ -1,4 +1,4 @@
-package com.beiying.supower;
+package com.beiying.supower.framework.utils;
 
 import android.annotation.TargetApi;
 import android.app.Activity;

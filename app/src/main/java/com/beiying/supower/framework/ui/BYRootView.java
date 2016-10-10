@@ -1,9 +1,11 @@
-package com.beiying.supower;
+package com.beiying.supower.framework.ui;
 
 import android.content.Context;
 import android.graphics.Color;
 import android.view.View;
 import android.widget.LinearLayout;
+
+import com.beiying.supower.BYView;
 
 /**
  * Created by beiying on 15/8/22.

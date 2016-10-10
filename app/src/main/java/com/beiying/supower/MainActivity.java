@@ -8,6 +8,8 @@ import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 
+import com.beiying.supower.framework.ui.BYRootView;
+
 
 public class MainActivity extends ActionBarActivity {
 

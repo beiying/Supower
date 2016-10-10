@@ -6,6 +6,7 @@ import android.view.View;
 
 import com.beiying.coreview.BYPathView;
 import com.beiying.coreview.BYProgressButton;
+import com.beiying.supower.framework.ui.BYControlCenter;
 
 
 /**

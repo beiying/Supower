@@ -1,4 +1,4 @@
-package com.beiying.supower;
+package com.beiying.supower.framework.ui;
 
 import android.view.View;
 

@@ -1,7 +1,9 @@
-package com.beiying.supower;
+package com.beiying.supower.framework.ui;
 
 import android.content.Context;
 import android.view.View;
+
+import com.beiying.supower.BYView;
 
 /**
  * Created by beiying on 15/8/21.

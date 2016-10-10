@@ -1,4 +1,4 @@
-package com.beiying.supower;
+package com.beiying.supower.framework.utils;
 
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
